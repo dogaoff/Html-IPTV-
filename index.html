@@ -288,7 +288,9 @@
 
             for (const fileObj of files) {
                 try {
-                    const res = await fetch(fileObj.url);
+                    // Passa a lista do GitHub Releases através do proxy para evitar o bloqueio de redirecionamento e CORS do GitHub
+                    const proxiedReleaseUrl = proxyBase + encodeURIComponent(fileObj.url);
+                    const res = await fetch(proxiedReleaseUrl);
                     if (res.ok) {
                         const text = await res.text();
                         parseM3UContent(text, fileObj.hint);
@@ -336,7 +338,8 @@
             resetData();
             updatePlayerStatus('Carregando lista remota...', 'loading');
             try {
-                const res = await fetch(url);
+                const proxiedUrl = proxyBase + encodeURIComponent(url);
+                const res = await fetch(proxiedUrl);
                 if (res.ok) {
                     const text = await res.text();
                     parseM3UContent(text, url.toLowerCase());
