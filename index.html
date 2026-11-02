@@ -92,7 +92,7 @@
         <div class="flex items-center gap-3">
             <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20">
                 <i class="fa-solid fa-rotate"></i>
-                <span>Sincronizar Listas</span>
+                <span>Sincronizar GitHub</span>
             </button>
 
             <button onclick="openModal('sourceModal')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-blue-600/20">
@@ -135,7 +135,7 @@
             <!-- Lista de Categorias -->
             <div class="flex-1 overflow-y-auto p-2" id="categoriesContainer">
                 <div class="text-center py-12 text-xs text-slate-500">
-                    Nenhuma lista carregada. Clique em "Sincronizar Listas".
+                    Nenhuma lista carregada. Clique em "Sincronizar GitHub".
                 </div>
             </div>
         </aside>
@@ -168,9 +168,9 @@
                         <i class="fa-solid fa-photo-film"></i>
                     </div>
                     <h3 class="text-base font-semibold text-slate-300 mb-1">Nenhum canal ou vídeo carregado</h3>
-                    <p class="text-xs max-w-sm text-slate-500 mb-6">Clique no botão verde acima para sincronizar das suas Releases.</p>
+                    <p class="text-xs max-w-sm text-slate-500 mb-6">Clique no botão verde acima para sincronizar direto do seu GitHub.</p>
                     <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition">
-                        Sincronizar Listas Agora
+                        Sincronizar GitHub Agora
                     </button>
                 </div>
             </div>
@@ -206,9 +206,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-2">Link Direto da Release</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">Link Direto Raw</label>
                     <div class="flex gap-2">
-                        <input type="text" id="urlInput" placeholder="https://github.com/.../releases/download/.../lista.m3u" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="urlInput" placeholder="https://raw.githubusercontent.com/.../lista.m3u" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500">
                         <button onclick="loadFromUrl()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 rounded-xl transition">
                             Carregar
                         </button>
@@ -278,19 +278,20 @@
 
         async function syncGithub() {
             const files = [
-                { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/live.m3u', hint: 'canais' }
+                { url: 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/refs/heads/main/dog%20canais.m3u', hint: 'canais' },
+                { url: 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/refs/heads/main/dog%20filmes.m3u', hint: 'filmes' },
+                { url: 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/refs/heads/main/dog%20series.m3u', hint: 'series' }
             ];
 
             resetData();
-            updatePlayerStatus('Sincronizando listas das Releases...', 'loading');
+            updatePlayerStatus('Sincronizando listas do GitHub...', 'loading');
 
             let loaded = 0;
 
             for (const fileObj of files) {
                 try {
-                    // Passa a lista do GitHub Releases através do proxy para evitar o bloqueio de redirecionamento e CORS do GitHub
-                    const proxiedReleaseUrl = proxyBase + encodeURIComponent(fileObj.url);
-                    const res = await fetch(proxiedReleaseUrl);
+                    const proxiedUrl = proxyBase + encodeURIComponent(fileObj.url);
+                    const res = await fetch(proxiedUrl);
                     if (res.ok) {
                         const text = await res.text();
                         parseM3UContent(text, fileObj.hint);
@@ -302,10 +303,10 @@
             }
 
             if (loaded > 0) {
-                updatePlayerStatus(`Listas sincronizadas com sucesso! (${loaded} carregadas)`, 'success');
+                updatePlayerStatus(`Listas sincronizadas com sucesso! (${loaded}/3 carregadas)`, 'success');
             } else {
-                updatePlayerStatus('Falha ao sincronizar das Releases.', 'error');
-                alert('Não foi possível carregar os arquivos das Releases do GitHub.');
+                updatePlayerStatus('Falha ao sincronizar do GitHub.', 'error');
+                alert('Não foi possível carregar os arquivos raw do GitHub.');
             }
         }
 
