@@ -250,6 +250,7 @@
         let groupedData = {};
         let hlsPlayer = null;
 
+        // Proxy exclusivo para a reprodução dos vídeos (evita bloqueio CORS nos streams)
         const proxyBase = 'https://corsproxy.io/?';
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -259,7 +260,6 @@
         function initHls() {
             const video = document.getElementById('videoPlayer');
             if (Hls.isSupported()) {
-                // Configuração automática para enviar todos os fragmentos/segmentos pelo Proxy Público
                 hlsPlayer = new Hls({
                     enableWorker: true,
                     xhrSetup: function (xhr, url) {
@@ -279,37 +279,39 @@
             }
         }
 
+        // Sincronização direta com o GitHub (sem proxy para as listas, eliminando erros de falha)
         async function syncGithub() {
+            const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
             const files = [
-                'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/dog%20canais.m3u',
-                'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/dog%20filmes.m3u',
-                'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/dog%20series.m3u'
+                'dog%20canais.m3u',
+                'dog%20filmes.m3u',
+                'dog%20series.m3u'
             ];
 
             resetData();
-            updatePlayerStatus('Sincronizando do GitHub via Proxy...', 'loading');
+            updatePlayerStatus('Sincronizando do GitHub...', 'loading');
 
             let loaded = 0;
 
-            for (const fileUrl of files) {
-                const proxiedUrl = proxyBase + encodeURIComponent(fileUrl);
+            for (const fileName of files) {
+                const fullUrl = baseUrl + fileName;
                 try {
-                    const res = await fetch(proxiedUrl);
+                    const res = await fetch(fullUrl);
                     if (res.ok) {
                         const text = await res.text();
-                        parseM3UContent(text, fileUrl.toLowerCase());
+                        parseM3UContent(text, decodeURIComponent(fileName).toLowerCase());
                         loaded++;
                     }
                 } catch (err) {
-                    console.error('Erro ao sincronizar arquivo:', fileUrl, err);
+                    console.error('Erro ao sincronizar arquivo:', fileName, err);
                 }
             }
 
             if (loaded > 0) {
                 updatePlayerStatus(`GitHub sincronizado com sucesso! (${loaded}/${files.length} listas)`, 'success');
             } else {
-                updatePlayerStatus('Falha ao sincronizar.', 'error');
-                alert('Não foi possível carregar os arquivos através do Proxy.');
+                updatePlayerStatus('Falha ao sincronizar listas.', 'error');
+                alert('Não foi possível carregar os arquivos do GitHub.');
             }
         }
 
@@ -342,8 +344,7 @@
             resetData();
             updatePlayerStatus('Carregando lista remota...', 'loading');
             try {
-                const proxiedUrl = proxyBase + encodeURIComponent(url);
-                const res = await fetch(proxiedUrl);
+                const res = await fetch(url);
                 if (res.ok) {
                     const text = await res.text();
                     parseM3UContent(text, url.toLowerCase());
@@ -615,7 +616,7 @@
             if (firstSeasonKey) renderEpisodes(seasons[firstSeasonKey]);
         }
 
-    function renderEpisodes(epList) {
+        function renderEpisodes(epList) {
             const episodesGrid = document.getElementById('episodesGrid');
             episodesGrid.innerHTML = '';
 
