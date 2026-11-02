@@ -266,7 +266,6 @@
             }
         }
 
-        // Função corrigida usando o domínio raw.githubusercontent.com com codificação correta para espaços
         async function syncGithub() {
             const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
             const files = [
@@ -524,26 +523,30 @@
             return card;
         }
 
+        // Função playStream atualizada para passar pelo seu Cloudflare Worker Proxy
         function playStream(url, name) {
             const video = document.getElementById('videoPlayer');
             updatePlayerStatus(`A reproduzir: ${name}`, 'loading');
 
+            const proxyBase = 'https://proxy-iptv.kgbdogao.workers.dev/?url=';
+            const proxiedUrl = proxyBase + encodeURIComponent(url);
+
             if (url.includes('.m3u8')) {
                 if (Hls.isSupported()) {
-                    hlsPlayer.loadSource(url);
+                    hlsPlayer.loadSource(proxiedUrl);
                     hlsPlayer.attachMedia(video);
                     hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
                         video.play();
                         updatePlayerStatus(`ONLINE: ${name}`, 'success');
                     });
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = url;
+                    video.src = proxiedUrl;
                     video.play();
                     updatePlayerStatus(`ONLINE: ${name}`, 'success');
                 }
             } else {
                 if (hlsPlayer) hlsPlayer.detachMedia();
-                video.src = url;
+                video.src = proxiedUrl;
                 video.play();
                 updatePlayerStatus(`ONLINE: ${name}`, 'success');
             }
