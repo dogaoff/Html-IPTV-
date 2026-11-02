@@ -250,7 +250,7 @@
         let groupedData = {};
         let hlsPlayer = null;
 
-        const proxyBase = 'https://corsproxy.io/?';
+        const proxyBase = 'https://api.allorigins.win/raw?url=';
 
         window.addEventListener('DOMContentLoaded', () => {
             initHls();
@@ -261,12 +261,10 @@
             if (Hls.isSupported()) {
                 hlsPlayer = new Hls({
                     enableWorker: true,
+                    fLoader: Hls.DefaultConfig.loader,
                     xhrSetup: function (xhr, url) {
-                        if (!url.includes('corsproxy.io')) {
-                            xhr.open('GET', proxyBase + encodeURIComponent(url), true);
-                        } else {
-                            xhr.open('GET', url, true);
-                        }
+                        const finalUrl = url.includes('allorigins.win') ? url : proxyBase + encodeURIComponent(url);
+                        xhr.open('GET', finalUrl, true);
                     }
                 });
 
@@ -278,14 +276,9 @@
             }
         }
 
-        // Sincronização apontando diretamente para as suas Releases no GitHub
         async function syncGithub() {
-            // Insira aqui os links diretos das releases para canais, filmes e séries
             const files = [
-                { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/live.m3u', hint: 'canais' },
-                // Adicione os links de filmes e séries caso os tenha nas releases:
-                // { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/filmes.m3u', hint: 'filmes' },
-                // { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/series.m3u', hint: 'series' }
+                { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/live.m3u', hint: 'canais' }
             ];
 
             resetData();
