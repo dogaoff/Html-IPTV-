@@ -250,6 +250,8 @@
         let groupedData = {};
         let hlsPlayer = null;
 
+        const proxyBase = 'https://proxy-iptv.kgbdogao.workers.dev/?url=';
+
         window.addEventListener('DOMContentLoaded', () => {
             initHls();
         });
@@ -257,7 +259,18 @@
         function initHls() {
             const video = document.getElementById('videoPlayer');
             if (Hls.isSupported()) {
-                hlsPlayer = new Hls({ enableWorker: true });
+                // Configuração automática para enviar todos os fragmentos/segmentos pelo Cloudflare Worker
+                hlsPlayer = new Hls({
+                    enableWorker: true,
+                    xhrSetup: function (xhr, url) {
+                        if (!url.includes('kgbdogao.workers.dev')) {
+                            xhr.open('GET', proxyBase + encodeURIComponent(url), true);
+                        } else {
+                            xhr.open('GET', url, true);
+                        }
+                    }
+                });
+
                 hlsPlayer.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
                         updatePlayerStatus('Erro na transmissão ou bloqueio CORS', 'error');
@@ -267,37 +280,36 @@
         }
 
         async function syncGithub() {
-            const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
             const files = [
-                'dog%20canais.m3u',
-                'dog%20filmes.m3u',
-                'dog%20series.m3u'
+                'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/dog%20canais.m3u',
+                'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/dog%20filmes.m3u',
+                'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/dog%20series.m3u'
             ];
 
             resetData();
-            updatePlayerStatus('Sincronizando do GitHub...', 'loading');
+            updatePlayerStatus('Sincronizando do GitHub via Proxy...', 'loading');
 
             let loaded = 0;
 
-            for (const fileName of files) {
-                const fullUrl = baseUrl + fileName;
+            for (const fileUrl of files) {
+                const proxiedUrl = proxyBase + encodeURIComponent(fileUrl);
                 try {
-                    const res = await fetch(fullUrl);
+                    const res = await fetch(proxiedUrl);
                     if (res.ok) {
                         const text = await res.text();
-                        parseM3UContent(text, decodeURIComponent(fileName).toLowerCase());
+                        parseM3UContent(text, fileUrl.toLowerCase());
                         loaded++;
                     }
                 } catch (err) {
-                    console.error('Erro ao sincronizar arquivo:', fileName, err);
+                    console.error('Erro ao sincronizar arquivo:', fileUrl, err);
                 }
             }
 
             if (loaded > 0) {
                 updatePlayerStatus(`GitHub sincronizado com sucesso! (${loaded}/${files.length} listas)`, 'success');
             } else {
-                updatePlayerStatus('Falha ao sincronizar. Verifique a conexão.', 'error');
-                alert('Não foi possível carregar os arquivos do GitHub. Certifique-se de que o repositório é público.');
+                updatePlayerStatus('Falha ao sincronizar. Verifique o Worker.', 'error');
+                alert('Não foi possível carregar os arquivos através do Cloudflare Worker.');
             }
         }
 
@@ -330,7 +342,8 @@
             resetData();
             updatePlayerStatus('Carregando lista remota...', 'loading');
             try {
-                const res = await fetch(url);
+                const proxiedUrl = proxyBase + encodeURIComponent(url);
+                const res = await fetch(proxiedUrl);
                 if (res.ok) {
                     const text = await res.text();
                     parseM3UContent(text, url.toLowerCase());
@@ -340,7 +353,7 @@
                     alert('Não foi possível carregar a URL fornecida.');
                 }
             } catch (err) {
-                alert('Erro ao carregar lista. Verifique se a URL permite CORS.');
+                alert('Erro ao carregar lista.');
             }
         }
 
@@ -523,12 +536,10 @@
             return card;
         }
 
-        // Função playStream atualizada para passar pelo seu Cloudflare Worker Proxy
         function playStream(url, name) {
             const video = document.getElementById('videoPlayer');
             updatePlayerStatus(`A reproduzir: ${name}`, 'loading');
 
-            const proxyBase = 'https://proxy-iptv.kgbdogao.workers.dev/?url=';
             const proxiedUrl = proxyBase + encodeURIComponent(url);
 
             if (url.includes('.m3u8')) {
