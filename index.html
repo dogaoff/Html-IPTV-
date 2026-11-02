@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamHub IPTV - Player Profissional</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HLS.js para reprodução de streams .m3u8 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f8fafc;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2563eb;
+        }
+
+        .aspect-poster {
+            aspect-ratio: 2 / 3;
+        }
+
+        .aspect-video-card {
+            aspect-ratio: 16 / 9;
+        }
+
+        .media-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .media-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4);
+            border-color: rgba(37, 99, 235, 0.6);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden select-none">
+
+    <!-- Topbar Header -->
+    <header class="h-16 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-6 flex items-center justify-between z-20 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg shadow-blue-600/30 flex items-center justify-center">
+                <i class="fa-solid fa-play text-sm"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-wide text-white flex items-center gap-2">
+                    STREAMHUB <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-semibold border border-blue-500/30">PRO</span>
+                </h1>
+                <p class="text-[11px] text-slate-400">Player IPTV Inteligente</p>
+            </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="hidden md:flex items-center gap-6 bg-slate-950/60 px-4 py-1.5 rounded-full border border-slate-800/80 text-xs text-slate-400">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Canais: <strong id="cnt-canais" class="text-slate-200">0</strong></span>
+            </div>
+            <div class="h-3 w-px bg-slate-800"></div>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-film text-blue-400"></i>
+                <span>Filmes: <strong id="cnt-filmes" class="text-slate-200">0</strong></span>
+            </div>
+            <div class="h-3 w-px bg-slate-800"></div>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-tv text-indigo-400"></i>
+                <span>Séries: <strong id="cnt-series" class="text-slate-200">0</strong></span>
+            </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="flex items-center gap-3">
+            <!-- Botão de Sincronização Direta com o GitHub -->
+            <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20">
+                <i class="fa-solid fa-rotate"></i>
+                <span>Sincronizar GitHub</span>
+            </button>
+
+            <button onclick="openModal('sourceModal')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-blue-600/20">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Carregar Lista</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- Sidebar / Categorias -->
+        <aside class="w-72 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+            
+            <!-- Abas -->
+            <div class="p-3 grid grid-cols-3 gap-1.5 bg-slate-950/50 border-b border-slate-800">
+                <button id="tab-canais" onclick="switchTab('canais')" class="tab-btn active py-2.5 text-xs font-medium rounded-lg flex flex-col items-center gap-1 text-blue-400 bg-slate-800 border border-blue-500/30 transition">
+                    <i class="fa-solid fa-tv"></i>
+                    <span>Canais</span>
+                </button>
+                <button id="tab-filmes" onclick="switchTab('filmes')" class="tab-btn py-2.5 text-xs font-medium rounded-lg flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition">
+                    <i class="fa-solid fa-film"></i>
+                    <span>Filmes</span>
+                </button>
+                <button id="tab-series" onclick="switchTab('series')" class="tab-btn py-2.5 text-xs font-medium rounded-lg flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition">
+                    <i class="fa-solid fa-clapperboard"></i>
+                    <span>Séries</span>
+                </button>
+            </div>
+
+            <!-- Busca -->
+            <div class="p-3 border-b border-slate-800">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="searchInput" oninput="filterMedia()" placeholder="Filtrar por nome..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition">
+                </div>
+            </div>
+
+            <!-- Lista de Categorias -->
+            <div class="flex-1 overflow-y-auto p-2" id="categoriesContainer">
+                <div class="text-center py-12 text-xs text-slate-500">
+                    Nenhuma lista carregada. Clique em "Sincronizar GitHub".
+                </div>
+            </div>
+        </aside>
+
+        <!-- Player + Grid -->
+        <main class="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+
+            <!-- Video Player -->
+            <div class="bg-black border-b border-slate-800 relative group flex justify-center items-center h-72 sm:h-80 md:h-[380px] shrink-0">
+                <video id="videoPlayer" class="w-full h-full object-contain" controls></video>
+                
+                <div id="playerOverlay" class="absolute top-4 left-4 bg-slate-900/90 backdrop-blur border border-slate-700/50 px-3.5 py-2 rounded-xl text-xs font-medium text-slate-300 flex items-center gap-2.5 pointer-events-none opacity-0 transition group-hover:opacity-100 shadow-xl">
+                    <span id="playerStatusDot" class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+                    <span id="playerStatusText">Aguardando reprodução...</span>
+                </div>
+            </div>
+
+            <!-- Grid Header -->
+            <div class="px-6 py-3.5 bg-slate-900/40 border-b border-slate-800/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <h2 id="currentCategoryTitle" class="text-sm font-bold text-slate-200">Todos os Conteúdos</h2>
+                    <span id="currentCategoryCount" class="text-xs px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-mono border border-slate-700">0</span>
+                </div>
+            </div>
+
+            <!-- Grid -->
+            <div class="flex-1 overflow-y-auto p-6" id="gridContainer">
+                <div class="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 text-2xl text-slate-600">
+                        <i class="fa-solid fa-photo-film"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-300 mb-1">Nenhum canal ou vídeo carregado</h3>
+                    <p class="text-xs max-w-sm text-slate-500 mb-6">Clique no botão verde acima para sincronizar direto do seu GitHub.</p>
+                    <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition">
+                        Sincronizar GitHub Agora
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal M3U -->
+    <div id="sourceModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-link text-blue-500"></i> Carregar Lista M3U
+                </h3>
+                <button onclick="closeModal('sourceModal')" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">Arquivo Local (.m3u / .m3u8)</label>
+                    <input type="file" id="fileInput" accept=".m3u,.m3u8" multiple class="hidden" onchange="handleFileUpload(event)">
+                    <button onclick="document.getElementById('fileInput').click()" class="w-full border-2 border-dashed border-slate-700 hover:border-blue-500 bg-slate-950/50 hover:bg-blue-500/5 p-5 rounded-2xl text-center text-xs text-slate-400 hover:text-slate-200 transition flex flex-col items-center gap-2.5">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-400"></i>
+                        <span>Clique para selecionar o arquivo .M3U do computador</span>
+                    </button>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-4 text-[10px] text-slate-500 uppercase font-semibold">ou URL remota</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">Link Direto ou GitHub Raw</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="urlInput" placeholder="https://raw.githubusercontent.com/.../lista.m3u" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                        <button onclick="loadFromUrl()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 rounded-xl transition">
+                            Carregar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Séries -->
+    <div id="seriesModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-tv"></i>
+                    </div>
+                    <div>
+                        <h3 id="seriesModalTitle" class="text-base font-bold text-white">Nome da Série</h3>
+                        <p class="text-xs text-slate-400">Selecione uma temporada e episódio</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('seriesModal')" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 flex overflow-hidden">
+                <div class="w-1/3 border-r border-slate-800 overflow-y-auto p-3 bg-slate-950/40" id="seasonsList"></div>
+                <div class="flex-1 overflow-y-auto p-4 bg-slate-950" id="episodesGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeTab = 'canais';
+        let activeCategory = 'TODOS';
+        let mediaData = { canais: [], filmes: [], series: [] };
+        let groupedData = {};
+        let hlsPlayer = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initHls();
+            // Opcional: Sincroniza automaticamente ao abrir a página se desejar
+            // syncGithub();
+        });
+
+        function initHls() {
+            const video = document.getElementById('videoPlayer');
+            if (Hls.isSupported()) {
+                hlsPlayer = new Hls({ enableWorker: true });
+                hlsPlayer.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        updatePlayerStatus('Erro na transmissão ou bloqueio CORS', 'error');
+                    }
+                });
+            }
+        }
+
+        // Função para Sincronizar Direto do Repositório do GitHub
+        async function syncGithub() {
+    const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
+    const files = [
+        'dog%2520canais.m3u', // ou 'dog%20canais.m3u' dependendo de como o espaço for tratado
+        'dog%2520filmes.m3u',
+        'dog%2520series.m3u'
+            ];
+
+            resetData();
+            updatePlayerStatus('Sincronizando do GitHub...', 'loading');
+
+            let loaded = 0;
+
+            for (const fileName of files) {
+                const fullUrl = baseUrl + fileName;
+                try {
+                    const res = await fetch(fullUrl);
+                    if (res.ok) {
+                        const text = await res.text();
+                        parseM3UContent(text, decodeURIComponent(fileName).toLowerCase());
+                        loaded++;
+                    }
+                } catch (err) {
+                    console.error('Erro ao sincronizar arquivo:', fileName, err);
+                }
+            }
+
+            if (loaded > 0) {
+                updatePlayerStatus(`GitHub sincronizado com sucesso! (${loaded}/${files.length} listas)`, 'success');
+            } else {
+                updatePlayerStatus('Falha ao sincronizar. Verifique a conexão.', 'error');
+                alert('Não foi possível carregar os arquivos do GitHub. Verifique se o repositório é público.');
+            }
+        }
+
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            resetData();
+            let loadedCount = 0;
+
+            Array.from(files).forEach(file => {
+                const fileName = file.name.toLowerCase();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    parseM3UContent(e.target.result, fileName);
+                    loadedCount++;
+                    if (loadedCount === files.length) {
+                        closeModal('sourceModal');
+                        updatePlayerStatus('Lista(s) carregada(s) com sucesso', 'success');
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        async function loadFromUrl() {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return;
+
+            resetData();
+            updatePlayerStatus('Carregando lista remota...', 'loading');
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const text = await res.text();
+                    parseM3UContent(text, url.toLowerCase());
+                    closeModal('sourceModal');
+                    updatePlayerStatus('Lista carregada com sucesso', 'success');
+                } else {
+                    alert('Não foi possível carregar a URL fornecida.');
+                }
+            } catch (err) {
+                alert('Erro ao carregar lista. Verifique se a URL permite CORS.');
+            }
+        }
+
+        function resetData() {
+            mediaData = { canais: [], filmes: [], series: [] };
+            renderAll();
+        }
+
+        function parseM3UContent(text, sourceHint = '') {
+            const lines = text.split('\n');
+            let currentItem = null;
+
+            for (let line of lines) {
+                line = line.trim();
+                if (line.startsWith('#EXTINF:')) {
+                    const name = line.split(',')[1] || 'Sem Nome';
+                    const group = (line.match(/group-title="(.*?)"/) || [])[1] || 'Geral';
+                    const logo = (line.match(/tvg-logo="(.*?)"/) || [])[1] || '';
+                    currentItem = { name: name.trim(), group: group.trim(), logo: logo.trim() };
+                } else if (line.startsWith('http') && currentItem) {
+                    currentItem.url = line;
+                    
+                    const lowerGroup = currentItem.group.toLowerCase();
+                    const lowerName = currentItem.name.toLowerCase();
+                    const lowerUrl = currentItem.url.toLowerCase();
+
+                    const isLiveFile = sourceHint.includes('live') || sourceHint.includes('canais');
+                    const isSeriesFile = sourceHint.includes('series') || sourceHint.includes('serie');
+                    const isVodFile = sourceHint.includes('vod') || sourceHint.includes('filmes');
+
+                    const isEpPattern = lowerName.match(/s\d+e\d+/i) || lowerName.match(/t\d+\s*ep\d+/i);
+                    const is24hChannel = lowerGroup.includes('24h') || lowerName.includes('24h') || lowerGroup.includes('canais') || lowerGroup.includes('tv');
+
+                    if (isSeriesFile || (isEpPattern && !is24hChannel)) {
+                        mediaData.series.push(currentItem);
+                    } else if (isVodFile || (lowerUrl.endsWith('.mp4') || lowerUrl.endsWith('.mkv')) && !is24hChannel) {
+                        mediaData.filmes.push(currentItem);
+                    } else {
+                        mediaData.canais.push(currentItem);
+                    }
+                    
+                    currentItem = null;
+                }
+            }
+
+            updateCounters();
+            renderAll();
+        }
+
+        function updateCounters() {
+            document.getElementById('cnt-canais').innerText = mediaData.canais.length;
+            document.getElementById('cnt-filmes').innerText = mediaData.filmes.length;
+            document.getElementById('cnt-series').innerText = mediaData.series.length;
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            activeCategory = 'TODOS';
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn py-2.5 text-xs font-medium rounded-lg flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition';
+            });
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            activeBtn.className = 'tab-btn active py-2.5 text-xs font-medium rounded-lg flex flex-col items-center gap-1 text-blue-400 bg-slate-800 border border-blue-500/30 transition shadow-inner';
+
+            renderAll();
+        }
+
+        function renderAll() {
+            groupCategories();
+            renderCategories();
+            renderGrid();
+        }
+
+        function groupCategories() {
+            groupedData = { 'TODOS': mediaData[activeTab] };
+            mediaData[activeTab].forEach(item => {
+                if (!groupedData[item.group]) {
+                    groupedData[item.group] = [];
+                }
+                groupedData[item.group].push(item);
+            });
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = '';
+
+            const categories = Object.keys(groupedData).sort();
+            categories.forEach(cat => {
+                const count = groupedData[cat].length;
+                const isSelected = activeCategory === cat;
+
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-3.5 py-2.5 rounded-xl text-xs flex justify-between items-center mb-1 transition ${
+                    isSelected ? 'bg-blue-600/15 text-blue-400 font-semibold border border-blue-500/30 shadow-sm' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                }`;
+                btn.onclick = () => {
+                    activeCategory = cat;
+                    renderCategories();
+                    renderGrid();
+                };
+                btn.innerHTML = `
+                    <span class="truncate pr-2">${cat}</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-md ${isSelected ? 'bg-blue-500/20 text-blue-300 font-bold' : 'bg-slate-800 text-slate-500'}">${count}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('gridContainer');
+            grid.innerHTML = '';
+
+            const items = (groupedData[activeCategory] || []).filter(item => {
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                return item.name.toLowerCase().includes(search);
+            });
+
+            document.getElementById('currentCategoryTitle').innerText = activeCategory;
+            document.getElementById('currentCategoryCount').innerText = items.length;
+
+            if (!items.length) {
+                grid.innerHTML = `
+                    <div class="h-64 flex flex-col items-center justify-center text-slate-500 text-xs">
+                        <i class="fa-solid fa-magnifying-glass text-2xl mb-2"></i>
+                        <span>Nenhum conteúdo encontrado nesta aba.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            const gridWrapper = document.createElement('div');
+            gridWrapper.className = activeTab === 'canais' 
+                ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4' 
+                : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-5';
+
+            if (activeTab === 'series') {
+                const seriesMap = {};
+                items.forEach(item => {
+                    const cleanName = item.name.replace(/S\d+E\d+.*/i, '').trim();
+                    if (!seriesMap[cleanName]) seriesMap[cleanName] = [];
+                    seriesMap[cleanName].push(item);
+                });
+
+                Object.keys(seriesMap).forEach(seriesTitle => {
+                    const firstEp = seriesMap[seriesTitle][0];
+                    const card = createMediaCard(seriesTitle, firstEp.logo, 'Série', () => openSeriesModal(seriesTitle, seriesMap[seriesTitle]));
+                    gridWrapper.appendChild(card);
+                });
+            } else {
+                items.forEach(item => {
+                    const tagLabel = activeTab === 'canais' ? 'Ao Vivo' : 'Filme';
+                    const card = createMediaCard(item.name, item.logo, tagLabel, () => playStream(item.url, item.name));
+                    gridWrapper.appendChild(card);
+                });
+            }
+
+            grid.appendChild(gridWrapper);
+        }
+
+        function createMediaCard(title, logoUrl, tag, onClick) {
+            const isChannel = activeTab === 'canais';
+            const card = document.createElement('div');
+            card.className = `media-card bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden cursor-pointer flex flex-col group shadow-md`;
+            
+            const imageAspect = isChannel ? 'aspect-video-card' : 'aspect-poster';
+
+            card.onclick = onClick;
+            card.innerHTML = `
+                <div class="relative w-full ${imageAspect} bg-slate-950 flex items-center justify-center overflow-hidden">
+                    <img src="${logoUrl}" onerror="this.src='https://via.placeholder.com/300x450/111827/4b5563?text=${encodeURIComponent(title)}'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
+                    <span class="absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-950/80 text-slate-300 border border-slate-700/50 backdrop-blur">${tag}</span>
+                </div>
+                <div class="p-3.5 bg-slate-900 flex-1 flex flex-col justify-between">
+                    <h4 class="text-xs font-semibold text-slate-200 truncate group-hover:text-blue-400 transition">${title}</h4>
+                </div>
+            `;
+            return card;
+        }
+
+        function playStream(url, name) {
+            const video = document.getElementById('videoPlayer');
+            updatePlayerStatus(`A reproduzir: ${name}`, 'loading');
+
+            if (url.includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    hlsPlayer.loadSource(url);
+                    hlsPlayer.attachMedia(video);
+                    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play();
+                        updatePlayerStatus(`ONLINE: ${name}`, 'success');
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
+                    video.play();
+                    updatePlayerStatus(`ONLINE: ${name}`, 'success');
+                }
+            } else {
+                if (hlsPlayer) hlsPlayer.detachMedia();
+                video.src = url;
+                video.play();
+                updatePlayerStatus(`ONLINE: ${name}`, 'success');
+            }
+        }
+
+        function updatePlayerStatus(text, state) {
+            const overlay = document.getElementById('playerOverlay');
+            const dot = document.getElementById('playerStatusDot');
+            const textEl = document.getElementById('playerStatusText');
+
+            textEl.innerText = text;
+            overlay.classList.remove('opacity-0');
+
+            if (state === 'loading') dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse';
+            else if (state === 'success') dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+            else if (state === 'error') dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+            else dot.className = 'w-2.5 h-2.5 rounded-full bg-slate-500';
+        }
+
+        function openSeriesModal(seriesTitle, episodes) {
+            document.getElementById('seriesModalTitle').innerText = seriesTitle;
+            openModal('seriesModal');
+
+            const seasons = {};
+            episodes.forEach(ep => {
+                const match = ep.name.match(/S(\d+)E(\d+)/i);
+                const seasonNum = match ? parseInt(match[1]) : 1;
+                const seasonKey = `Temporada ${seasonNum}`;
+                if (!seasons[seasonKey]) seasons[seasonKey] = [];
+                seasons[seasonKey].push(ep);
+            });
+
+            const seasonsList = document.getElementById('seasonsList');
+            const episodesGrid = document.getElementById('episodesGrid');
+            seasonsList.innerHTML = '';
+            episodesGrid.innerHTML = '';
+
+            Object.keys(seasons).forEach((seasonKey, index) => {
+                const sBtn = document.createElement('button');
+                sBtn.className = `w-full text-left px-4 py-3 rounded-xl text-xs font-semibold mb-2 transition flex justify-between items-center ${
+                    index === 0 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                }`;
+                sBtn.innerHTML = `<span>${seasonKey}</span> <i class="fa-solid fa-chevron-right text-[10px]"></i>`;
+                
+                sBtn.onclick = () => {
+                    document.querySelectorAll('#seasonsList button').forEach(b => b.className = 'w-full text-left px-4 py-3 rounded-xl text-xs font-semibold mb-2 transition flex justify-between items-center bg-slate-900 text-slate-400 hover:bg-slate-800');
+                    sBtn.className = 'w-full text-left px-4 py-3 rounded-xl text-xs font-semibold mb-2 transition flex justify-between items-center bg-indigo-600 text-white shadow-lg shadow-indigo-600/20';
+                    renderEpisodes(seasons[seasonKey]);
+                };
+
+                seasonsList.appendChild(sBtn);
+            });
+
+            const firstSeasonKey = Object.keys(seasons)[0];
+            if (firstSeasonKey) renderEpisodes(seasons[firstSeasonKey]);
+        }
+
+        function renderEpisodes(epList) {
+            const episodesGrid = document.getElementById('episodesGrid');
+            episodesGrid.innerHTML = '';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+
+            epList.exit = epList.forEach(ep => {
+                const item = document.createElement('div');
+                item.className = 'bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-xl cursor-pointer flex items-center justify-between group transition';
+                item.onclick = () => {
+                    playStream(ep.url, ep.name);
+                    closeModal('seriesModal');
+                };
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center shrink-0 transition">
+                            <i class="fa-solid fa-play text-xs"></i>
+                        </div>
+                        <span class="text-xs font-medium text-slate-300 group-hover:text-white truncate">${ep.name}</span>
+                    </div>
+                `;
+                wrapper.appendChild(item);
+            });
+
+            episodesGrid.appendChild(wrapper);
+        }
+
+        function filterMedia() {
+            renderGrid();
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
