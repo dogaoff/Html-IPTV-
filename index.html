@@ -92,7 +92,7 @@
         <div class="flex items-center gap-3">
             <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20">
                 <i class="fa-solid fa-rotate"></i>
-                <span>Sincronizar GitHub</span>
+                <span>Sincronizar Listas</span>
             </button>
 
             <button onclick="openModal('sourceModal')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-blue-600/20">
@@ -135,7 +135,7 @@
             <!-- Lista de Categorias -->
             <div class="flex-1 overflow-y-auto p-2" id="categoriesContainer">
                 <div class="text-center py-12 text-xs text-slate-500">
-                    Nenhuma lista carregada. Clique em "Sincronizar GitHub".
+                    Nenhuma lista carregada. Clique em "Sincronizar Listas".
                 </div>
             </div>
         </aside>
@@ -168,9 +168,9 @@
                         <i class="fa-solid fa-photo-film"></i>
                     </div>
                     <h3 class="text-base font-semibold text-slate-300 mb-1">Nenhum canal ou vídeo carregado</h3>
-                    <p class="text-xs max-w-sm text-slate-500 mb-6">Clique no botão verde acima para sincronizar direto do seu GitHub.</p>
+                    <p class="text-xs max-w-sm text-slate-500 mb-6">Clique no botão verde acima para sincronizar das suas Releases.</p>
                     <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition">
-                        Sincronizar GitHub Agora
+                        Sincronizar Listas Agora
                     </button>
                 </div>
             </div>
@@ -206,9 +206,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-300 mb-2">Link Direto ou GitHub Raw</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-2">Link Direto da Release</label>
                     <div class="flex gap-2">
-                        <input type="text" id="urlInput" placeholder="https://raw.githubusercontent.com/.../lista.m3u" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="urlInput" placeholder="https://github.com/.../releases/download/.../lista.m3u" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500">
                         <button onclick="loadFromUrl()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 rounded-xl transition">
                             Carregar
                         </button>
@@ -250,7 +250,6 @@
         let groupedData = {};
         let hlsPlayer = null;
 
-        // Proxy exclusivo para a reprodução dos vídeos (evita bloqueio CORS nos streams)
         const proxyBase = 'https://corsproxy.io/?';
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -279,39 +278,39 @@
             }
         }
 
-        // Sincronização direta com o GitHub (sem proxy para as listas, eliminando erros de falha)
+        // Sincronização apontando diretamente para as suas Releases no GitHub
         async function syncGithub() {
-            const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
+            // Insira aqui os links diretos das releases para canais, filmes e séries
             const files = [
-                'dog%20canais.m3u',
-                'dog%20filmes.m3u',
-                'dog%20series.m3u'
+                { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/live.m3u', hint: 'canais' },
+                // Adicione os links de filmes e séries caso os tenha nas releases:
+                // { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/filmes.m3u', hint: 'filmes' },
+                // { url: 'https://github.com/dogaoff/LISTA_FAMILY_IPTV/releases/download/apk1-latest/series.m3u', hint: 'series' }
             ];
 
             resetData();
-            updatePlayerStatus('Sincronizando do GitHub...', 'loading');
+            updatePlayerStatus('Sincronizando listas das Releases...', 'loading');
 
             let loaded = 0;
 
-            for (const fileName of files) {
-                const fullUrl = baseUrl + fileName;
+            for (const fileObj of files) {
                 try {
-                    const res = await fetch(fullUrl);
+                    const res = await fetch(fileObj.url);
                     if (res.ok) {
                         const text = await res.text();
-                        parseM3UContent(text, decodeURIComponent(fileName).toLowerCase());
+                        parseM3UContent(text, fileObj.hint);
                         loaded++;
                     }
                 } catch (err) {
-                    console.error('Erro ao sincronizar arquivo:', fileName, err);
+                    console.error('Erro ao sincronizar arquivo:', fileObj.url, err);
                 }
             }
 
             if (loaded > 0) {
-                updatePlayerStatus(`GitHub sincronizado com sucesso! (${loaded}/${files.length} listas)`, 'success');
+                updatePlayerStatus(`Listas sincronizadas com sucesso! (${loaded} carregadas)`, 'success');
             } else {
-                updatePlayerStatus('Falha ao sincronizar listas.', 'error');
-                alert('Não foi possível carregar os arquivos do GitHub.');
+                updatePlayerStatus('Falha ao sincronizar das Releases.', 'error');
+                alert('Não foi possível carregar os arquivos das Releases do GitHub.');
             }
         }
 
@@ -625,7 +624,7 @@
 
             epList.forEach(ep => {
                 const item = document.createElement('div');
-                item.className = 'bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-xl cursor-pointer flex items-center justify-between group transition';
+                item.className = 'media-card bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-xl cursor-pointer flex items-center justify-between group transition';
                 item.onclick = () => {
                     playStream(ep.url, ep.name);
                     closeModal('seriesModal');
