@@ -90,7 +90,6 @@
 
         <!-- Ações -->
         <div class="flex items-center gap-3">
-            <!-- Botão de Sincronização Direta com o GitHub -->
             <button onclick="syncGithub()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20">
                 <i class="fa-solid fa-rotate"></i>
                 <span>Sincronizar GitHub</span>
@@ -253,8 +252,6 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             initHls();
-            // Opcional: Sincroniza automaticamente ao abrir a página se desejar
-            // syncGithub();
         });
 
         function initHls() {
@@ -269,13 +266,13 @@
             }
         }
 
-        // Função para Sincronizar Direto do Repositório do GitHub
+        // Função corrigida usando o domínio raw.githubusercontent.com com codificação correta para espaços
         async function syncGithub() {
-    const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
-    const files = [
-        'dog%2520canais.m3u', // ou 'dog%20canais.m3u' dependendo de como o espaço for tratado
-        'dog%2520filmes.m3u',
-        'dog%2520series.m3u'
+            const baseUrl = 'https://raw.githubusercontent.com/dogaoff/Html-IPTV-/main/';
+            const files = [
+                'dog%20canais.m3u',
+                'dog%20filmes.m3u',
+                'dog%20series.m3u'
             ];
 
             resetData();
@@ -301,7 +298,7 @@
                 updatePlayerStatus(`GitHub sincronizado com sucesso! (${loaded}/${files.length} listas)`, 'success');
             } else {
                 updatePlayerStatus('Falha ao sincronizar. Verifique a conexão.', 'error');
-                alert('Não foi possível carregar os arquivos do GitHub. Verifique se o repositório é público.');
+                alert('Não foi possível carregar os arquivos do GitHub. Certifique-se de que o repositório é público.');
             }
         }
 
@@ -611,7 +608,7 @@
             const wrapper = document.createElement('div');
             wrapper.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
 
-            epList.exit = epList.forEach(ep => {
+            epList.forEach(ep => {
                 const item = document.createElement('div');
                 item.className = 'bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-xl cursor-pointer flex items-center justify-between group transition';
                 item.onclick = () => {
